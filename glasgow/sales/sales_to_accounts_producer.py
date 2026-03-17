@@ -13,15 +13,15 @@ def get_next_invoice_number():
     try:
         with open(INVOICE_FILE, 'r') as f:
             content = f.read().strip()
-            # Remove any leading zeros or padding
+            # remove any leading zeros or padding
             last_invoice = int(content)
     except (FileNotFoundError, ValueError):
         last_invoice = 0
 
     next_invoice = last_invoice + 1
+    # pad the invoice number with leading zeros for consistency
     padded_invoice = str(next_invoice).zfill(4)
 
-    # Store the padded number
     with open(INVOICE_FILE, 'w') as f:
         f.write(padded_invoice)
 
@@ -56,7 +56,7 @@ def send_to_queue(payload):
         print(f"CRITICAL: Could not connect to RabbitMQ at {RABBIT_IP}. Check Router/Firewall.")
         return False
     except pika.exceptions.AuthenticationError:
-        print("CRITICAL: Invalid credentials (admin/password123) for RabbitMQ.")
+        print("CRITICAL: Invalid credentials for RabbitMQ.")
         return False
     except pika.exceptions.ChannelClosedByBroker:
         print("CRITICAL: The broker closed the channel. Check if the queue name is valid.")

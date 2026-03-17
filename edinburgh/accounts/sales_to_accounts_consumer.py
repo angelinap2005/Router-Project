@@ -115,7 +115,7 @@ try:
     chan.queue_declare(queue=IN_QUEUE, durable=True)
     chan.basic_consume(queue=IN_QUEUE, on_message_callback=callback)
     # confirm the queue has started
-    print("Accounts Office listening...")
+    print("Accounts Office is listening on the Sales Queue...")
     chan.start_consuming()
 except Exception as e:
     print(f"Fatal connection error in Accounts: {e}")
