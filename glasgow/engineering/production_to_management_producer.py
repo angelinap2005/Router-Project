@@ -23,7 +23,7 @@ def get_last_production_entry():
 
 
 def save_production_entry(date, units):
-    # save production entry to file
+    # save production entry to the file
     try:
         with open(PERSISTENCE_FILE, 'a') as f:
             f.write(f"{date} : {units} units\n")
@@ -102,7 +102,7 @@ def engineering_portal():
         except Exception as e:
             print(f"Unhandled POST error: {type(e).__name__}: {e}")
             return "Internal application error.", 500
-
+# web form
     return '''
         <h2>Engineering Office - Daily Production Data</h2>
         <form method="POST">

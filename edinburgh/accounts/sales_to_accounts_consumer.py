@@ -7,6 +7,20 @@ IN_QUEUE = 'sales_to_accounts'
 OUT_QUEUE = 'management_queue'
 PERSISTENCE_FILE = 'running_invoice_total.txt'
 
+def get_global_corporate_total():
+    # calculate the total number of all invoices from the persistence file
+    global_total = 0.0
+    try:
+        with open(PERSISTENCE_FILE, 'r') as f:
+            for line in f:
+                if ':' in line:
+                    parts = line.split(':')
+                    # format: "CustomerName : £Total Last Invoice No.: InvoiceNo"
+                    amount_part = parts[1].strip().replace('£', '').split()[0]
+                    global_total += float(amount_part)
+    except FileNotFoundError:
+        pass
+    return global_total
 
 def get_running_total_for_customer(customer):
     try:
@@ -70,39 +84,43 @@ def notify_management(total):
 
 def callback(ch, method, properties, body):
     try:
-        # validate the message format
         data = json.loads(body)
         if not isinstance(data, dict) or data is None:
             print("Error: Message is not a valid JSON object.")
             ch.basic_ack(delivery_tag=method.delivery_tag)
             return
 
-        # check for required fields
         amount = data.get('amount')
         customer = data.get('customer')
         invoice_no = data.get('invoice_no')
+
         if amount is None or customer is None or invoice_no is None:
             print("ERROR: Missing required fields in message.")
             ch.basic_ack(delivery_tag=method.delivery_tag)
             return
-
         else:
             amount = float(amount)
             invoice_no = str(invoice_no).strip()
             customer = customer.strip()
-            # get the running total for the customer or initialise to 0 if not found
+
+            # save the running total for the customer
             customer_total = get_running_total_for_customer(customer)
             if customer_total is None:
-                print(f"New Customer: {customer} with Invoice No. {invoice_no}")
                 save_total(amount, customer, invoice_no)
-                notify_management(amount)
-                ch.basic_ack(delivery_tag=method.delivery_tag)
             else:
                 new_total = customer_total + amount
                 save_total(new_total, customer, invoice_no)
-                notify_management(new_total)
-                print(f"Processed Invoice {invoice_no}. New Total for {customer}: {new_total}")
-                ch.basic_ack(delivery_tag=method.delivery_tag)
+
+            # calculate the global corporate total
+            global_total = get_global_corporate_total()
+
+            # send the updated global total to management
+            notify_management(global_total)
+
+            print(f"Processed Invoice {invoice_no} for {customer}.")
+            print(f"Global Corporate Total Updated to: £{global_total}")
+
+            ch.basic_ack(delivery_tag=method.delivery_tag)
 
     except json.JSONDecodeError:
         print("Error: Invalid JSON message.")
